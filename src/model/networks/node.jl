@@ -13,6 +13,7 @@ macro AbstractNodeBaseAttributes()
         price_supply::Vector{Float64} = $node_defaults[:price_supply]
         price_unmet_policy::Dict{DataType,Float64} = Dict{DataType,Float64}()
         rhs_policy::Dict{DataType,Float64} = Dict{DataType,Float64}()
+        policy_lower_bound::Dict{DataType,Float64} = Dict{DataType,Float64}()
         supply_flow::JuMPVariable = Matrix{VariableRef}(undef, 0, 0)
     end)
 end
@@ -41,6 +42,7 @@ end
     - price_supply::Vector{Float64}: Supply costs by segment
     - price_unmet_policy::Dict{DataType,Float64}: Mapping of policy types to penalty costs
     - rhs_policy::Dict{DataType,Float64}: Mapping of policy types to right-hand side values
+    - policy_lower_bound::Dict{DataType,Float64}: Mapping of policy types to lower-bound values
     - supply_flow::Union{JuMPVariable,Matrix{Float64}}: JuMP variables or matrix representing supply flows
 
     Note: Base attributes are inherited from AbstractVertex via @AbstractVertexBaseAttributes macro.
@@ -72,7 +74,8 @@ function make_node(data::AbstractDict{Symbol,Any}, time_data::TimeData, commodit
         price_nsd = get(data, :price_nsd, [0.0]),
         price_supply = get(data, :price_supply, [0.0]),
         price_unmet_policy = get(data, :price_unmet_policy, Dict{DataType,Float64}()),
-        rhs_policy = get(data, :rhs_policy, Dict{DataType,Float64}())
+        rhs_policy = get(data, :rhs_policy, Dict{DataType,Float64}()),
+        policy_lower_bound = get(data, :policy_lower_bound, Dict{DataType,Float64}())
         # filtered_data...
     )
     
@@ -110,6 +113,8 @@ price_unmet_policy(n::Node) = n.price_unmet_policy;
 price_unmet_policy(n::Node, c::DataType) = price_unmet_policy(n)[c];
 rhs_policy(n::Node) = n.rhs_policy;
 rhs_policy(n::Node, c::DataType) = rhs_policy(n)[c];
+policy_lower_bound(n::Node) = n.policy_lower_bound;
+policy_lower_bound(n::Node, c::DataType) = policy_lower_bound(n)[c];
 segments_non_served_demand(n::Node) = 1:length(n.max_nsd);
 supply_flow(n::Node) = n.supply_flow;
 supply_flow(n::Node, s::Int64, t::Int64) = supply_flow(n)[s, t];
@@ -132,6 +137,11 @@ function add_linking_variables!(n::Node, model::Model)
                 [w in subperiod_indices(n)],
                 base_name = "v" * string(ct_type) * "_Budget_$(id(n))_period$(period_index(n))"
             )
+
+            # Default if no policy_lower_bound is not adding any lower bound
+            if haskey(n.policy_lower_bound, ct_type)
+                set_lower_bound.(n.policy_budgeting_vars[Symbol(string(ct_type) * "_Budget")], n.policy_lower_bound[ct_type])
+            end
         end
     end
 
