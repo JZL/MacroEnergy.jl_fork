@@ -1,19 +1,19 @@
 macro AbstractNodeBaseAttributes()
     node_defaults = node_default_data()
     esc(quote
-        demand::Vector{Float64} = Vector{Float64}()
+        demand::Vector{Float64} = $node_defaults[:demand]
         min_nsd::Vector{Float64} = $node_defaults[:min_nsd]
         max_nsd::Vector{Float64} = $node_defaults[:max_nsd]
         max_supply::Vector{Float64} = $node_defaults[:max_supply]
         non_served_demand::JuMPVariable = Matrix{VariableRef}(undef, 0, 0)
         policy_budgeting_vars::Dict = Dict()
         policy_slack_vars::Dict = Dict()
-        price::Vector{Float64} = Vector{Float64}()
+        price::Vector{Float64} = $node_defaults[:price]
         price_nsd::Vector{Float64} = $node_defaults[:price_nsd]
         price_supply::Vector{Float64} = $node_defaults[:price_supply]
-        price_unmet_policy::Dict{DataType,Float64} = Dict{DataType,Float64}()
-        rhs_policy::Dict{DataType,Float64} = Dict{DataType,Float64}()
-        policy_lower_bound::Dict{DataType,Float64} = Dict{DataType,Float64}()
+        price_unmet_policy::Dict{DataType,Float64} = $node_defaults[:price_unmet_policy]
+        rhs_policy::Dict{DataType,Float64} = $node_defaults[:rhs_policy]
+        policy_lower_bound::Dict{DataType,Float64} = $node_defaults[:policy_lower_bound]
         supply_flow::JuMPVariable = Matrix{VariableRef}(undef, 0, 0)
     end)
 end
@@ -64,18 +64,20 @@ function make_node(data::AbstractDict{Symbol,Any}, time_data::TimeData, commodit
             delete!(filtered_data, key)
         end
     end
+    node_defaults = node_default_data()
     _node = Node{commodity}(;
         id = id,
         timedata = time_data,
-        demand = get(data, :demand, Vector{Float64}()),
-        max_nsd = get(data, :max_nsd, [0.0]),
-        max_supply = get(data, :max_supply, [0.0]),
-        price = get(data, :price, Vector{Float64}()),
-        price_nsd = get(data, :price_nsd, [0.0]),
-        price_supply = get(data, :price_supply, [0.0]),
-        price_unmet_policy = get(data, :price_unmet_policy, Dict{DataType,Float64}()),
-        rhs_policy = get(data, :rhs_policy, Dict{DataType,Float64}()),
-        policy_lower_bound = get(data, :policy_lower_bound, Dict{DataType,Float64}())
+        demand = get(data, :demand, node_defaults[:demand]),
+        min_nsd =  get(data, :min_nsd, node_defaults[:min_nsd]),
+        max_nsd = get(data, :max_nsd, node_defaults[:max_nsd]),
+        max_supply = get(data, :max_supply, node_defaults[:max_supply]),
+        price = get(data, :price, node_defaults[:price]),
+        price_nsd = get(data, :price_nsd, node_defaults[:price_nsd]),
+        price_supply = get(data, :price_supply, node_defaults[:price_supply]),
+        price_unmet_policy = get(data, :price_unmet_policy, node_defaults[:price_unmet_policy]),
+        rhs_policy = get(data, :rhs_policy, node_defaults[:rhs_policy]),
+        policy_lower_bound = get(data, :policy_lower_bound, node_defaults[:policy_lower_bound])
         # filtered_data...
     )
     
@@ -243,7 +245,7 @@ end
 
 function make(commodity::Type{<:Commodity}, input_data::AbstractDict{Symbol,Any}, system)
 
-    input_data = recursive_merge(clear_dict(node_default_data()), input_data)
+    input_data = recursive_merge(node_default_data(), input_data)    
     defaults = node_default_data()
 
     @process_data(data, input_data, [(input_data, key)])
