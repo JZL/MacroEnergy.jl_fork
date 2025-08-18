@@ -245,7 +245,7 @@ end
 
 function make(commodity::Type{<:Commodity}, input_data::AbstractDict{Symbol,Any}, system)
 
-    input_data = recursive_merge(node_default_data(), input_data)    
+    input_data = recursive_merge(node_default_data(), input_data)
     defaults = node_default_data()
 
     @process_data(data, input_data, [(input_data, key)])
