@@ -104,6 +104,9 @@ function check_and_convert_policy_lower_bound!(data::AbstractDict{Symbol,Any})
     policy_lower_bound = Dict{DataType,Float64}()
     constraints = constraint_types()
     for (k, v) in data[:policy_lower_bound]
+        if v== false
+            continue # Skip if the value is false
+        end
         new_k = constraints[Symbol(k)]
         policy_lower_bound[new_k] = v
     end
